@@ -1,0 +1,400 @@
+---
+title: "Exploring the Relationships Among Physical Activity, Stress Levels, and BMI Categories"
+author: "Fransciska Olivia Putri Warae"
+date: "2025-06-06"
+output:
+  html_document: default
+  word_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# 1. Dataset
+
+## 1.1 About 
+This dataset contains 374 rows and 13 columns (variables). The variables we used are :
+
+1. **Physical Activity Level**
+The number of minutes the person engages in physical activity daily.
+
+2. **Stress Level**
+A subjective rating of the stress level experienced by the person, ranging from 1 to 10.
+
+3. **BMI Category (Body Mass Index)**
+The BMI category of the person (e.g., Underweight, Normal, Overweight).
+
+In this project, we use these variables to analyze how physical activity and stress levels are related to BMI categories. 
+
+
+## 1.2 Upload Data
+```{r}
+df = read.csv("Sleep_health_and_lifestyle_dataset_2.csv", header=T, sep=",")
+head(df)
+```
+
+```{r}
+df$BMI.Category <- trimws(df$BMI.Category)
+df$BMI.Category[df$BMI.Category == "Normal Weight"] <- "Normal"
+```
+
+```{r}
+df$BMI.Category <- factor(
+  df$BMI.Category,
+  levels = c("Normal", "Overweight", "Obese"),
+  ordered = TRUE
+)
+```
+
+```{r}
+table(df$BMI.Category, useNA = "ifany")
+```
+
+```{r}
+head(df)
+```
+
+```{r}
+summary(df)
+```
+
+
+```{r}
+which(duplicated(df))
+```
+
+
+
+# 2. Correlation Test
+
+## 2.1 Physical Activity Level vs Stress Level
+```{r}
+shapiro.test(df$Physical.Activity.Level) # alpha = 0.05
+```
+p-value > alpha indicates that the data follows a normal distribution.
+
+```{r}
+shapiro.test(df$Stress.Level)
+```
+p-value < alpha indicates that the data does not follow a normal distribution.
+
+
+```{r}
+cor.test(df$Physical.Activity.Level, df$Stress.Level, method="kendall") # alpha = 0.05
+```
+**There is not enough evidence to suggest that Physical Activity Level and Stress Level are related.**
+
+
+## 2.2 Physical Activity Level vs BMI Category
+```{r}
+# change to numeric
+table(df$BMI.Category)
+df$BMI.Category_numeric <- as.numeric(df$BMI.Category)
+
+# Correlation Test
+correlation_result <- cor.test(df$Physical.Activity.Level, df$BMI.Category_numeric, method = "spearman")
+
+print(correlation_result) # alpha = 0 .05
+```
+**Since the p-value > alpha, it indicates that there is no statistically significant evidence of a correlation between Physical Activity Level and BMI Category.**
+
+## 2.3 Stress Level vs BMI Category
+```{r}
+  # Change to numeric
+df$BMI.Category_num <- as.numeric(df$BMI.Category)
+
+# Correlation Test
+correlation_stressbmi<- cor.test(df$Stress.Level, df$BMI.Category_num, method = "spearman")
+
+print(correlation_stressbmi) # alpha = 0.05
+
+```
+**Since the p-value < alpha, it indicates that there is statistically significant evidence of a correlation between Physical Activity Level and BMI Category.**
+
+
+# 3. Plot
+
+```{r}
+library(plotly)
+library(ggplot2)
+library(dplyr)
+```
+
+## 3.1 Boxplot of Stress Level by BMI Category
+**We use boxplot to show that stress levels vary depending on the BMI category.**
+
+```{r}
+plot_ly(
+  data = df,
+  x = ~BMI.Category,
+  y = ~Stress.Level,
+  type = "box",
+  color = ~BMI.Category,  # agar warnanya beda tiap kategori
+  colors = c("lightblue", "lightgreen", "salmon"),  # custom warna
+  boxpoints = "all",  # tampilkan titik data juga
+  jitter = 0.3,
+  pointpos = -1.8
+) %>%
+  layout(
+    title = "Stress Level Distribution Based on BMI Category",
+    xaxis = list(title = "BMI Category"),
+    yaxis = list(title = "Stress Level"),
+    boxmode = "group"
+  )
+```
+The graph shows that individuals classified as Obese tend to have higher stress levels compared to those in other BMI categories. Statistical testing supports this observation, indicating a significant relationship between BMI Category and Stress Level. 
+
+## 3.2 Boxplot of Physical Activity Level by BMI Category
+
+```{r}
+plot_ly(
+  data = df,
+  x = ~BMI.Category,
+  y = ~Physical.Activity.Level,
+  type = "box",
+  color = ~BMI.Category,
+  colors = c("lightblue", "lightgreen", "salmon"),
+  boxpoints = "all",
+  jitter = 0.3,
+  pointpos = -1.8
+) %>%
+  layout(
+    title = "Physical Activity Level by BMI Category",
+    xaxis = list(title = "BMI Category"),
+    yaxis = list(title = "Physical Activity Level"),
+    boxmode = "group"
+  )
+```
+The boxplot illustrates the distribution of Physical Activity Level across different BMI categories. Although there are slight visual differences, statistical testing indicates that there is no significant relationship between BMI Category and Physical Activity Level.
+
+## 3.3 Scatter Plot of Stress Level and Physical Activity Level
+```{r}
+plot_ly(
+  data = df,
+  x = ~Physical.Activity.Level,
+  y = ~Stress.Level,
+  type = "scatter",
+  mode = "markers",
+  marker = list(
+    color = 'mediumseagreen',
+    size = 10,
+    opacity = 0.6
+  )
+) %>%
+  layout(
+    title = "Scatterplot: Physical Activity Level vs Stress Level",
+    xaxis = list(title = "Physical Activity Level"),
+    yaxis = list(title = "Stress Level")
+  )
+```
+This scatterplot illustrates the relationship between Physical Activity Level and Stress Level. The data points appear widely dispersed, indicating no clear correlation between these two variables. This suggests that in this dataset, stress levels are not strongly associated with physical activity levels.
+
+## 3.4 Distribusi Kategori BMI
+```{r}
+library(ggplot2)
+
+ggplot(df, aes(x = BMI.Category, fill = BMI.Category)) +
+  geom_bar(width = 0.6) +
+  geom_text(
+    stat = "count",
+    aes(label = after_stat(count)),
+    vjust = -0.4
+  ) +
+  scale_fill_manual(
+    values = c("Normal" = "lightblue",
+               "Overweight" = "lightgreen",
+               "Obese" = "salmon")
+  ) +
+  scale_y_continuous(expand = expansion(mult = c(0, 0.12))) +
+  labs(
+    title = "Number of Respondents by BMI Category",
+    x = "BMI Category",
+    y = "Number of Respondents"
+  ) +
+  theme_minimal() +
+  theme(legend.position = "none")
+```
+The bar chart shows that 216 respondents belong to the Normal BMI category, followed by 148 in the Overweight category and 10 in the Obese category. These unequal group sizes should be considered when comparing patterns, as observations from the Obese group are based on a much smaller sample.
+
+
+## 3.5 Physical Activity and Stress by BMI Category
+```{r}
+ggplot(df, aes(x = Physical.Activity.Level, y = Stress.Level)) +
+  geom_count(
+    aes(color = BMI.Category),
+    alpha = 0.7
+  ) +
+  facet_wrap(~ BMI.Category, nrow = 1) +
+  scale_color_manual(
+    values = c("Normal" = "steelblue",
+               "Overweight" = "darkgreen",
+               "Obese" = "tomato")
+  ) +
+  scale_size_area(max_size = 12) +
+  labs(
+    title = "Physical Activity and Stress by BMI Category",
+    x = "Physical Activity Level",
+    y = "Stress Level",
+    size = "Number of\nRespondents"
+  ) +
+  guides(color = "none") +
+  
+  scale_x_continuous(
+  expand = expansion(mult = c(0.15, 0.15))
+) +
+scale_y_continuous(
+  expand = expansion(mult = c(0.12, 0.12))
+) +
+  
+  theme_minimal()
+```
+The bubble plot displays physical activity and stress levels within each BMI category, with larger bubbles representing more respondents at the same combination of values. The Normal and Overweight groups show varied patterns, with no consistent upward or downward trend. For example, the Overweight group includes clusters at activity level 75 with stress level 3 and activity level 90 with stress level 8. In the Obese group, higher activity levels visually correspond to lower stress levels, but this pattern is based on only 10 respondents and requires cautious interpretation. The plot alone does not establish statistical significance or causation.
+
+# 4. Summary of Correlation Results
+
+Correlation tests were conducted using a significance level of 0.05. After combining “Normal Weight” with “Normal”, all 374 observations were included in the analysis. Kendall’s tau was used to examine the relationship between physical activity and stress levels, while Spearman’s rho was used for relationships involving the ordered BMI categories.
+
+```{r}
+# Gunakan df yang sudah dibersihkan pada bagian 1.2
+df$BMI.Category_numeric <- as.numeric(df$BMI.Category)
+
+test_activity_stress <- cor.test(
+  df$Physical.Activity.Level,
+  df$Stress.Level,
+  method = "kendall",
+  exact = FALSE
+)
+
+test_activity_bmi <- cor.test(
+  df$Physical.Activity.Level,
+  df$BMI.Category_numeric,
+  method = "spearman",
+  exact = FALSE
+)
+
+test_stress_bmi <- cor.test(
+  df$Stress.Level,
+  df$BMI.Category_numeric,
+  method = "spearman",
+  exact = FALSE
+)
+
+results <- data.frame(
+  Relationship = c(
+    "Physical Activity vs Stress",
+    "Physical Activity vs BMI",
+    "Stress vs BMI"
+  ),
+  Method = c("Kendall", "Spearman", "Spearman"),
+  N = c(
+    sum(complete.cases(df[, c("Physical.Activity.Level", "Stress.Level")])),
+    sum(complete.cases(df[, c("Physical.Activity.Level", "BMI.Category_numeric")])),
+    sum(complete.cases(df[, c("Stress.Level", "BMI.Category_numeric")]))
+  ),
+  Coefficient = c(
+    unname(test_activity_stress$estimate),
+    unname(test_activity_bmi$estimate),
+    unname(test_stress_bmi$estimate)
+  ),
+  p_value = c(
+    test_activity_stress$p.value,
+    test_activity_bmi$p.value,
+    test_stress_bmi$p.value
+  )
+)
+
+results$Conclusion <- ifelse(
+  results$p_value < 0.05,
+  "Statistically significant",
+  "Not statistically significant"
+)
+
+knitr::kable(
+  results,
+  digits = 4,
+  col.names = c(
+    "Relationship", "Method", "N",
+    "Coefficient", "p-value", "Conclusion"
+  ),
+  caption = "Summary of Correlation Tests"
+)
+```
+```{r}
+df$BMI.Category_numeric <- as.numeric(df$BMI.Category)
+
+test_activity_stress <- cor.test(
+  df$Physical.Activity.Level,
+  df$Stress.Level,
+  method = "kendall",
+  exact = FALSE
+)
+
+test_activity_bmi <- cor.test(
+  df$Physical.Activity.Level,
+  df$BMI.Category_numeric,
+  method = "spearman",
+  exact = FALSE
+)
+
+test_stress_bmi <- cor.test(
+  df$Stress.Level,
+  df$BMI.Category_numeric,
+  method = "spearman",
+  exact = FALSE
+)
+
+results <- data.frame(
+  Relationship = c(
+    "Physical Activity vs Stress",
+    "Physical Activity vs BMI",
+    "Stress vs BMI"
+  ),
+  Method = c("Kendall", "Spearman", "Spearman"),
+  N = c(
+    sum(complete.cases(df[, c("Physical.Activity.Level", "Stress.Level")])),
+    sum(complete.cases(df[, c("Physical.Activity.Level", "BMI.Category_numeric")])),
+    sum(complete.cases(df[, c("Stress.Level", "BMI.Category_numeric")]))
+  ),
+  Coefficient = c(
+    unname(test_activity_stress$estimate),
+    unname(test_activity_bmi$estimate),
+    unname(test_stress_bmi$estimate)
+  ),
+  p_value = c(
+    test_activity_stress$p.value,
+    test_activity_bmi$p.value,
+    test_stress_bmi$p.value
+  )
+)
+
+results$Conclusion <- ifelse(
+  results$p_value < 0.05,
+  "Statistically significant",
+  "Not statistically significant"
+)
+
+knitr::kable(
+  results,
+  digits = 4,
+  col.names = c(
+    "Relationship", "Method", "N",
+    "Coefficient", "p-value", "Conclusion"
+  ),
+  caption = "Summary of Correlation Tests"
+)
+```
+
+The table summarizes the correlation tests for all 374 respondents. At the 0.05 significance level, physical activity showed no statistically significant correlation with stress level (p = 0.3333) or BMI category (p = 0.2393). Stress level showed a statistically significant but weak positive correlation with BMI category (ρ = 0.1397, p = 0.0068). This indicates that higher stress levels tended to be associated with higher BMI categories, although the association was weak and does not imply causation.
+
+# 5. Conclusion
+This study examined the relationships between physical activity, stress levels, and BMI categories among 374 respondents. There was insufficient evidence of a monotonic association between physical activity and stress levels (Kendall’s τ = −0.0390, p = 0.3333), or between physical activity and BMI category (Spearman’s ρ = 0.0610, p = 0.2393).
+Stress level showed a statistically significant but weak positive association with BMI category (Spearman’s ρ = 0.1397, p = 0.0068). This suggests that higher stress levels tended to occur alongside higher BMI categories in this dataset, although the relationship was weak.
+The visualizations complement these results by showing variation within BMI categories and unequal group sizes. These findings describe associations and do not establish that stress causes changes in BMI or that physical activity has no relationship with stress or BMI.
+
+# 6. Limitations
+This analysis has several limitations. First, the BMI groups were unequal in size: 216 respondents were classified as Normal, 148 as Overweight, and only 10 as Obese. Patterns in the Obese group therefore have limited support from the available observations.
+Second, the analysis used pairwise correlations and did not account for other variables, such as age, gender, or occupation, which may influence the observed relationships. Stress was measured using a subjective rating, while BMI was represented by categories rather than continuous measurements.
+Third, Kendall’s and Spearman’s correlations assess monotonic relationships and may not capture more complex patterns. The reported p-values are unadjusted for the three comparisons. Finally, the analysis cannot establish causation, and the findings should not be generalized beyond this dataset without information about its sampling method and representativeness.
+
